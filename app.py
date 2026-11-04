@@ -29,7 +29,7 @@ TRANS = {
     "기타": "Other", "손끝 채혈": "Finger-stick", "CGM": "CGM", "검사실 혈장검사": "Lab plasma", "검사실": "Lab", "식단": "Food", "운동": "Activity", "생활습관": "Habits",
 }
 
-st.set_page_config(page_title="GlucoBridge", page_icon="💗", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="GlucoBridge", layout="wide", initial_sidebar_state="collapsed")
 
 for key, value in {
     "lang": "한국어", "mode": "diabetes", "unit": "mg/dL", "page": 0,
