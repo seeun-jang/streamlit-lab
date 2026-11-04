@@ -1,4 +1,4 @@
-"""VITALOG: 기록 검증·집계·CSV 보관·인쇄용 요약. API 호출 없음."""
+"""GlucoBridge: 혈당 기록 검증·집계·CSV·인쇄용 진료 보고서 (네트워크 호출 없음)."""
 import csv
 import io
 import json
@@ -68,7 +68,7 @@ def import_csv(data):
     if len(data) > 2_000_000: raise ValueError("CSV는 2MB 이하로 올려 주세요.")
     try:
         reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig")), strict=True)
-        if reader.fieldnames != COLUMNS: raise ValueError("VITALOG에서 저장한 CSV 양식을 사용하세요.")
+        if reader.fieldnames != COLUMNS: raise ValueError("GlucoBridge 또는 기존 VITALOG에서 저장한 CSV 양식을 사용하세요.")
         rows = []
         for index, r in enumerate(reader, 2):
             if index > 5001: raise ValueError("한 번에 5000개 이하의 기록을 불러올 수 있습니다.")
@@ -79,7 +79,7 @@ def import_csv(data):
                     r["method"], note, r["minutes_after_meal"] or None, r["record_id"]))
             except (ValueError, KeyError, TypeError): raise ValueError(f"CSV {index}행의 날짜·수치·단위·조건·메모를 확인하세요.") from None
         return rows
-    except (UnicodeError, csv.Error): raise ValueError("UTF-8 형식의 VITALOG CSV 파일을 확인하세요.") from None
+    except (UnicodeError, csv.Error): raise ValueError("UTF-8 형식의 GlucoBridge/GlucoBridge CSV 파일을 확인하세요.") from None
 
 def merge_records(existing, incoming):
     merged = {r["record_id"]: r for r in existing}
@@ -125,7 +125,7 @@ def display_rows(records):
              "원래 수치": r["value"], "단위": r["unit"], "조건": r["context"], "식후 경과(분)": r["minutes_after_meal"],
              "방법": r["method"], "메모": r["note"]} for r in sorted(records, key=lambda r: r['measured_at'], reverse=True)]
 
-def report_html(records, start, end, questions="", language="ko", glucose_unit="mg/dL"):
+def report_html(records, start, end, questions="", language="ko", glucose_unit="mg/dL", ai_summary=""):
     if language not in ("ko", "en"): raise ValueError("한국어와 영어 보고서를 지원합니다.")
     english = language == "en"
     summary = summarize(records)
@@ -158,14 +158,19 @@ def report_html(records, start, end, questions="", language="ko", glucose_unit="
                 f"Total {summary['전체 기록']} records · {summary['기록 일수']} days recorded · {summary['혈당 기록']} glucose readings · {summary['HbA1c 기록']} HbA1c results")
     caveat = pick('평균은 입력된 측정값의 산술평균입니다. 24시간 평균·TIR·GMI를 뜻하지 않습니다. 미기록 시간의 상태나 변화의 원인은 판단하지 않습니다. mmol/L와 mg/dL는 근사계수 18로 환산합니다. 측정 방법과 조건, 식후 경과 시간을 나누어 집계합니다.',
                   'Means describe the entered readings only, not a 24-hour mean, TIR or GMI. Unrecorded periods and causes of change are not inferred. Glucose unit conversions use the approximate factor 18. Context, measurement method and minutes after a meal are grouped separately.')
-    footer = pick('전체 원본은 VITALOG CSV로 별도 보관할 수 있습니다. 사용자가 입력하거나 불러온 참고 자료이며, 병원 확인을 받은 검사 성적표·진단·치료 지시가 아닙니다.',
-                  'The complete original records can be stored separately as VITALOG CSV. This user-entered/imported reference is not a verified laboratory report, diagnosis or treatment instruction. Free-text notes and questions are preserved as entered, without automatic translation.')
-    return f'''<!DOCTYPE html><html lang="{language}"><meta charset="UTF-8"><title>VITALOG - {title}</title>
-<style>body{{max-width:1100px;margin:35px auto;padding:0 20px;color:#253044;font:14px/1.7 Arial,"Malgun Gothic",sans-serif}}h1{{margin:0;font-size:30px}}h2{{font-size:19px;margin-top:30px}}.muted{{color:#596579}}.card{{padding:15px;background:#f2eff7;border-radius:12px}}table{{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0}}th,td{{border:1px solid #d8dce5;text-align:left;padding:7px;overflow-wrap:anywhere}}th{{background:#f4f5f8}}.questions{{white-space:pre-wrap}}@media print{{body{{margin:0;max-width:none;padding:0}}thead{{display:table-header-group}}tr{{break-inside:avoid}}@page{{size:A4 landscape;margin:14mm}}}}</style>
-<h1>VITALOG</h1><p class="muted">{title} · {escape(str(start))} ~ {escape(str(end))} · UTC+09:00 (KST)</p>
+    footer = pick('전체 원본은 GlucoBridge CSV로 별도 보관할 수 있습니다. 사용자가 입력하거나 불러온 참고 자료이며, 병원 확인을 받은 검사 성적표·진단·치료 지시가 아닙니다.',
+                  'The complete original records can be stored separately as GlucoBridge CSV. This user-entered/imported reference is not a verified laboratory report, diagnosis or treatment instruction. Free-text notes and questions are preserved as entered, without automatic translation.')
+    ai_section = ""
+    if ai_summary:
+        ai_title = pick("AI 생성 참고 설명 (의료진 검증 전)", "AI-generated reference explanation (not clinician-verified)")
+        ai_note = pick("본 설명은 의료적 판단이나 치료 지시가 아닌 자동 생성된 참고 자료입니다.", "Automatically generated reference only; not a medical assessment or treatment instruction.")
+        ai_section = f'<h2>{escape(ai_title)}</h2><div class="card questions">{escape(ai_summary)}</div><p class="muted">{escape(ai_note)}</p>'
+    return f'''<!DOCTYPE html><html lang="{language}"><meta charset="UTF-8"><title>GlucoBridge - {title}</title>
+<style>body{{max-width:1100px;margin:35px auto;padding:0 20px;color:#253044;font:14px/1.7 Arial,"Malgun Gothic",sans-serif}}h1{{margin:0;font-size:30px;color:#1c315a}}h2{{font-size:19px;margin-top:30px}}.muted{{color:#596579}}.card{{padding:15px;background:linear-gradient(110deg,#eef3ff,#eafff9);border-radius:12px}}table{{width:100%;border-collapse:collapse;font-size:12px;margin:12px 0}}th,td{{border:1px solid #d8dce5;text-align:left;padding:7px;overflow-wrap:anywhere}}th{{background:#f4f5f8}}.questions{{white-space:pre-wrap}}@media print{{body{{margin:0;max-width:none;padding:0}}thead{{display:table-header-group}}tr{{break-inside:avoid}}@page{{size:A4 landscape;margin:14mm}}}}</style>
+<h1>Gluco<span style="color:#4763f6">Bridge</span></h1><p class="muted">{title} · {escape(str(start))} ~ {escape(str(end))} · UTC+09:00 (KST)</p>
 <div class="card">{line}<br>{pick('최근 HbA1c','Latest HbA1c')}: {escape(a1c)}</div>
 <h2>{pick('조건·측정 방법별 혈당 요약','Glucose summary by context and method')} ({glucose_unit})</h2>{stat_table}
-<p class="muted">{caveat}</p><h2>{pick('의료진에게 확인할 질문','Questions for the clinician')}</h2><div class="questions">{escape(questions or pick('직접 작성한 질문 없음','No questions entered'))}</div>
+<p class="muted">{caveat}</p>{ai_section}<h2>{pick('의료진에게 확인할 질문','Questions for the clinician')}</h2><div class="questions">{escape(questions or pick('직접 작성한 질문 없음','No questions entered'))}</div>
 <h2>{pick('기록 상세 (최근 최대 50건)','Record details (up to 50 most recent records)')}</h2>{detail}
 <p class="muted">{footer}<br>{pick('작성','Generated')}: {datetime.now(KST).strftime('%Y-%m-%d %H:%M')} UTC+09:00</p></html>'''
 
