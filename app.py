@@ -42,6 +42,7 @@ st.markdown("""
         border: 1px solid #E5EAF2;
         border-radius: 16px;
         padding: 24px;
+        margin-bottom: 10px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
 
@@ -85,6 +86,39 @@ st.markdown("""
         font-size: 18px;
         font-weight: 700;
     }
+
+    .counter-card {
+        background: #EEF2FF;
+        border: 1px solid #DEE5FF;
+        border-radius: 18px;
+        padding: 30px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .counter-label {
+        color: #7483A3;
+        font-size: 15px;
+    }
+
+    .counter-number {
+        color: #5369BB;
+        font-size: 52px;
+        font-weight: 800;
+        margin-top: 5px;
+    }
+
+    div.stButton > button {
+        border-radius: 12px;
+        font-weight: 700;
+        width: 100%;
+    }
+
+    div.stButton > button[kind="primary"] {
+        background-color: #697FD0;
+        border-color: #697FD0;
+        color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -92,23 +126,23 @@ st.markdown("""
 # ---------- 사이드바 ----------
 st.sidebar.header("⚙️ 조건 설정")
 
-st.sidebar.markdown("#### 💰 오늘의 예산")
 budget = st.sidebar.slider(
-    "예산 (원)",
+    "💰 오늘의 예산 (원)",
     min_value=5000,
     max_value=15000,
     value=10000,
     step=1000
 )
 
-st.sidebar.markdown("---")
-
 spicy = st.sidebar.checkbox("🌶️ 매운 음식 괜찮음")
 
 st.sidebar.caption("조건을 변경하면 추천 메뉴가 자동으로 바뀝니다.")
 
 
-# ---------- 메인 화면 ----------
+# ==========================================
+# 실습 1-2 : 점심 메뉴 고르기
+# ==========================================
+
 st.markdown("""
 <div class="main-title">🍱 오늘 점심 뭐 먹지?</div>
 <div class="subtitle">
@@ -121,8 +155,6 @@ category = st.selectbox(
     ["한식", "분식", "중식", "양식"]
 )
 
-
-# ---------- 메뉴 데이터 ----------
 menus = {
     "한식": [
         ("김치찌개", 8000, True),
@@ -146,16 +178,14 @@ menus = {
     ]
 }
 
-
-# ---------- 조건에 맞는 메뉴 찾기 ----------
+# 조건에 맞는 메뉴 찾기
 choices = [
     (name, price, is_spicy)
     for name, price, is_spicy in menus[category]
     if price <= budget and (spicy or not is_spicy)
 ]
 
-
-# ---------- 결과 요약 ----------
+# 결과 요약
 st.markdown("### 📊 추천 결과")
 
 left, right = st.columns(2)
@@ -177,7 +207,7 @@ with right:
     """, unsafe_allow_html=True)
 
 
-# ---------- 추천 메뉴 출력 ----------
+# 추천 메뉴 출력
 st.markdown("### ✨ 추천 메뉴")
 
 if choices:
@@ -196,4 +226,39 @@ if choices:
         """, unsafe_allow_html=True)
 
 else:
-    st.warning("조건에 맞는 메뉴가 없습니다. 예산이나 매운맛 조건을 변경해 보세요.")
+    st.warning("조건에 맞는 메뉴가 없습니다. 예산이나 조건을 변경해 보세요.")
+
+
+# ==========================================
+# 실습 1-3 : 클릭 카운터
+# ==========================================
+
+st.divider()
+
+st.markdown("### 🔢 클릭 카운터")
+st.caption("버튼을 누를 때마다 숫자가 1씩 증가합니다.")
+
+# 세션 상태에 카운터 저장
+if "count" not in st.session_state:
+    st.session_state.count = 0
+
+# 버튼
+col1, col2 = st.columns(2)
+
+with col1:
+    if st.button("➕ +1", type="primary"):
+        st.session_state.count += 1
+
+with col2:
+    if st.button("🔄 초기화"):
+        st.session_state.count = 0
+
+# 카운터 결과
+st.markdown(f"""
+<div class="counter-card">
+    <div class="counter-label">현재 누른 횟수</div>
+    <div class="counter-number">{st.session_state.count}</div>
+</div>
+""", unsafe_allow_html=True)
+
+st.caption("💡 session_state를 사용해 버튼을 눌러도 숫자가 유지됩니다.")
