@@ -26,7 +26,7 @@ METHODS = ["손끝 채혈", "CGM", "검사실 혈장검사"]
 COLUMNS = ["record_id", "measured_at", "item", "value", "unit", "context", "minutes_after_meal", "method", "note_json"]
 TRANS = {
     "공복(8시간 이상)": "Fasting 8h+", "식전": "Before meal", "식후": "After meal", "취침 전": "Bedtime",
-    "기타": "Other", "손끝 채혈": "Finger-stick", "CGM": "CGM", "검사실 혈장검사": "Lab plasma", "검사실": "Lab",
+    "기타": "Other", "손끝 채혈": "Finger-stick", "CGM": "CGM", "검사실 혈장검사": "Lab plasma", "검사실": "Lab", "식단": "Food", "운동": "Activity", "생활습관": "Habits",
 }
 
 st.set_page_config(page_title="GlucoBridge", page_icon="💗", layout="wide", initial_sidebar_state="collapsed")
@@ -268,12 +268,15 @@ def report_html(records, start, end, unit, language, questions, ai_note=""):
         return "<table><tr>" + "".join(f"<th>{esc(x)}</th>" for x in headers) + "</tr>" + cells + "</table>"
     # Build report values without changing user interface language.
     summary = stats(records, unit)
-    summary_rows = [[r["조건·방법"], r["건수"], r["평균"], r["중앙값"], r["최소"], r["최대"]] for r in summary]
+    summary_rows = [[tr(r["조건·방법"]) if english else r["조건·방법"], r["건수"], r["평균"], r["중앙값"], r["최소"], r["최대"]] for r in summary]
     detail_rows = []
     for r in sorted(records, key=lambda x: x["measured_at"], reverse=True)[:50]:
         value = display_glucose(r, unit) if r["item"] == "혈당" else r["value"]
-        detail_rows.append([r["measured_at"][:16].replace("T", " "), r["item"], value,
-                            unit if r["item"] == "혈당" else "%", r["context"], r["method"], r["note"]])
+        detail_rows.append([r["measured_at"][:16].replace("T", " "),
+                            ("Glucose" if r["item"] == "혈당" else r["item"]) if english else r["item"], value,
+                            unit if r["item"] == "혈당" else "%",
+                            tr(r["context"]) if english else r["context"],
+                            tr(r["method"]) if english else r["method"], r["note"]])
     headers = ["Condition/method", "Count", "Mean", "Median", "Min", "Max"] if english else ["조건/방법", "건수", "평균", "중앙값", "최소", "최대"]
     fields = ["Time (KST)", "Item", "Value", "Unit", "Context", "Method", "Original note"] if english else ["시각(KST)", "항목", "값", "단위", "조건", "방법", "원문 메모"]
     return f'''<!doctype html><html><head><meta charset="utf-8"><title>{title}</title><style>
@@ -295,7 +298,7 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=Noto+Sans+KR:wght@400;500;700;800&display=swap');
 .stApp {background:radial-gradient(circle at 96% 4%,#e5fff5,transparent 30%),#f5f7fc;color:#233659}
-.block-container {max-width:1460px;padding-top:1.7rem;padding-bottom:3rem}
+.block-container {max-width:1460px;padding-top:4.5rem;padding-bottom:3rem}
 html,body,p,button,input,textarea {font-family:'DM Sans','Noto Sans KR',sans-serif}
 .brand {font-size:29px;font-weight:800;letter-spacing:-1.2px;color:#24365f}.brand b {color:#5668ef}
 .eyebrow {font-size:12px;color:#7184a4;letter-spacing:.06em}
@@ -334,12 +337,12 @@ with prefs:
 with st.container(key="hero"):
     mascot_area, copy_area = st.columns([0.75, 1.8], vertical_alignment="center", gap="large")
     with mascot_area:
-        mascot_path = Path(__file__).parent / "assets" / "mascot.png"
+        mascot_path = Path(__file__).resolve().parent / "assets" / "mascot.png"
         if mascot_path.is_file():
             encoded = base64.b64encode(mascot_path.read_bytes()).decode("ascii")
             st.markdown(f'<div class="mascot"><img alt="GlucoBridge mascot" src="data:image/png;base64,{encoded}"></div>', unsafe_allow_html=True)
         else:
-            st.markdown('<div class="mascot" style="font-size:100px">💗</div>', unsafe_allow_html=True)
+            st.warning(T("마스코트 파일이 없어요: GitHub assets/mascot.png에 PNG를 업로드하세요.", "Mascot missing: upload assets/mascot.png to GitHub."))
     with copy_area:
         st.markdown(f'<div class="eyebrow">GLUCOBRIDGE · YOUR WELLNESS COMPANION</div>'
                     f'<div class="hero-title">{T("나의 혈당 기록, 더 쉽게 이해하기.", "Understand your glucose, beautifully.")}</div>'
