@@ -1,7 +1,6 @@
 """GlucoBridge | One-file bilingual glucose journal prototype.
 Demo only: no permanent storage, patient diagnosis, or hospital integration.
 """
-import base64
 import csv
 import html
 import io
@@ -1270,7 +1269,8 @@ header[data-testid='stHeader']{background:transparent}
 .gb-logo b{color:#5266ee}.gb-caption{font-size:13px;color:#7384a2;letter-spacing:.06em}
 .st-key-hero{border:1px solid #dce6fa;background:linear-gradient(112deg,#dfe9ff 0%,#edf4ff 58%,#fff 91%);border-radius:30px;padding:27px 40px!important;box-shadow:0 14px 38px #4566b51a;margin:17px 0 25px}
 .st-key-hero [data-testid='stHorizontalBlock']{align-items:center}
-.st-key-hero [data-testid='stImage'] img{max-height:248px;object-fit:contain;filter:drop-shadow(0 15px 13px #4464aa2b)}
+.gb-mascot{width:100%;max-width:270px;margin:auto;display:flex;align-items:center;justify-content:center}
+.gb-mascot img{width:100%;height:auto;max-height:250px;object-fit:contain;display:block;filter:drop-shadow(0 15px 13px #4464aa2b)}
 .gb-pill{display:inline-block;border:1px solid #b8c8f7;border-radius:50px;background:#ffffff9c;padding:8px 13px;font-size:12px;font-weight:800;letter-spacing:.07em;color:#4962bd}
 .gb-hero-title{font-size:clamp(30px,3vw,47px);line-height:1.28;letter-spacing:-1.7px;color:#233971;font-weight:800;margin:14px 0 12px}
 .gb-hero-sub{font-size:16px;line-height:1.9;color:#52698c;max-width:690px;margin:0}
@@ -1296,7 +1296,7 @@ header[data-testid='stHeader']{background:transparent}
 [data-testid='stDataFrame']{border-radius:13px;overflow:hidden}
 .gb-footer{color:#8190a6;font-size:12px;border-top:1px solid #e5ebf5;padding-top:20px;margin-top:35px;line-height:1.7}
 @media(max-width:920px){.block-container{padding:1.3rem 1rem 3rem}.gb-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.st-key-hero{padding:23px!important}.gb-hero-title{font-size:31px}.st-key-menu [data-testid='stHorizontalBlock']{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.st-key-menu [data-testid='stColumn']{width:auto!important;min-width:0!important}.st-key-menu button{font-size:12px!important;min-height:54px!important;height:auto!important}}
-@media(max-width:540px){.gb-kpis{gap:9px}.gb-kpi{padding:13px;min-height:101px}.gb-kpi-value{font-size:22px}.gb-hero-sub{font-size:13px}.gb-section h2{font-size:22px}.st-key-hero [data-testid='stImage'] img{max-height:160px}}
+@media(max-width:540px){.gb-kpis{gap:9px}.gb-kpi{padding:13px;min-height:101px}.gb-kpi-value{font-size:22px}.gb-hero-sub{font-size:13px}.gb-section h2{font-size:22px}.gb-mascot{max-width:165px}.gb-mascot img{max-height:165px}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1569,7 +1569,14 @@ with st.container(key="hero"):
                 if st.session_state.mode == "diabetes" else T("건강 습관을 기록하고 데이터와 함께 변화를 살펴보세요.", "Build healthy habits and explore your wellness journal."))
         st.markdown(f'<h1 class="gb-hero-title">{title}</h1><p class="gb-hero-sub">{desc}</p>', unsafe_allow_html=True)
     with character:
-        st.image(base64.b64decode(MASCOT_PNG_BASE64), width=260)
+        # Plain HTML image: avoids Streamlit's ImageList frontend chunk.
+        # The base64 bytes are the user's selected heart-hugging mascot.
+        st.markdown(
+            f'<div class="gb-mascot"><img '
+            f'src="data:image/png;base64,{MASCOT_PNG_BASE64}" '
+            f'alt="GlucoBridge heart-hugging droplet mascot"></div>',
+            unsafe_allow_html=True,
+        )
 
 all_records = st.session_state.records
 latest = sorted((r for r in all_records if r["item"] == "혈당"), key=lambda r: r["measured_at"])
