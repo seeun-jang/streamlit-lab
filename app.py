@@ -515,11 +515,21 @@ elif st.session_state.page == 2:
                             payload={"period":[str(start),str(end)],"statistics_mg_dL":stats(selected),
                                      "hba1c_count":sum(r["item"]=="HbA1c" for r in selected),
                                      "question":question,"language":st.session_state.lang}
-                            with st.spinner(T("AI가 설명 중이에요…","Generating…")):
-                                reply=genai.Client(api_key=key).models.generate_content(
-                                    model=model,contents=json.dumps(payload,ensure_ascii=False),
-                                    config=types.GenerateContentConfig(system_instruction=AI_RULES))
-                                answer=(reply.text or "").strip()
+                           with st.spinner(T("AI가 설명 중이에요…", "Generating…")):
+
+    with genai.Client(api_key=key) as client:
+        reply = client.models.generate_content(
+            model=model,
+            contents=json.dumps(payload, ensure_ascii=False),
+            config=types.GenerateContentConfig(
+                system_instruction=AI_RULES
+            )
+        )
+
+    answer = (reply.text or "").strip()
+
+if not answer:
+    raise ValueError("Empty AI response")
                             if not answer:raise ValueError("Empty answer")
                             st.session_state.ai_answer={"text":answer,"signature":record_signature(selected),"start":str(start),"end":str(end),"lang":st.session_state.lang,"ai":True}
                         except Exception as e:
